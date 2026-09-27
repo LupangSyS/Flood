@@ -11,11 +11,17 @@
 <div id="map"></div>
 <div id="top" class="bar">
   <div id="status" class="card">แตะ “เริ่ม GPS” เพื่อดูตำแหน่งของคุณ</div>
+  <div id="route" class="card" hidden>
+    <div id="step" class="step"></div>
+    <div id="routeInfo" class="rinfo"></div>
+  </div>
 </div>
 <div id="bot" class="bar">
   <button id="gps" type="button">เริ่ม GPS</button>
   <button id="follow" type="button" class="sec" aria-pressed="true">ตามตำแหน่ง: เปิด</button>
-  <a id="nav" class="btn" href="#" target="_blank" rel="noopener" hidden>นำทางใน Google Maps</a>
+  <button id="go" type="button" hidden>นำทางเลี่ยงน้ำท่วม</button>
+  <button id="stop" type="button" class="sec" hidden>หยุดนำทาง</button>
+  <a id="ext" class="btn sec" href="#" target="_blank" rel="noopener" hidden>เปิดในแอป Google Maps</a>
   <details class="card lg" open>
     <summary id="stamp">กำลังโหลดข้อมูล…</summary>
     <span><i style="background:var(--R)"></i>&gt;15 ซม.</span>

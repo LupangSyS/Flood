@@ -7,9 +7,13 @@ html,body{height:100%;margin:0;font:15px/1.4 system-ui,"IBM Plex Sans Thai","Not
 #bot{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 .card{background:var(--bg);border-radius:10px;box-shadow:0 2px 8px #0003;padding:8px 12px}
 #status{flex:1;min-width:0}
+#route{flex-basis:100%}
+.step{font-size:18px;font-weight:700;line-height:1.3}
+.rinfo{font-size:13px;color:#3d4d57;margin-top:2px}
+.rinfo.bad{color:var(--R);font-weight:600}
 #status.warn{background:var(--R);color:#fff;font-weight:600}
 button,a.btn{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--pri);color:#fff;text-decoration:none;box-shadow:0 2px 8px #0003;cursor:pointer}
-button.sec{background:var(--bg);color:var(--ink)}
+button.sec,a.btn.sec{background:var(--bg);color:var(--ink)}
 button:focus-visible,a.btn:focus-visible,summary:focus-visible{outline:3px solid #ffbf00;outline-offset:2px}
 .lg{font-size:12px;display:grid;gap:2px}
 .lg summary{cursor:pointer;font-weight:600}
