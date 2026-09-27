@@ -20,9 +20,15 @@ CNF
 log() { echo "$*" | tee -a "$OUT/log.txt"; }
 get() { # url -> file; records status, type and size
   local url="$1" f="$2"
-  local meta; meta=$(curl -sS -L -m 30 -A "$UA" --max-filesize 3000000 -o "$f" -w '%{http_code} %{content_type} %{size_download}' "$url" 2>&1)
+  local meta; meta=$(curl -sS -L -m 30 "${CURL_CA[@]}" -A "$UA" --max-filesize 3000000 -o "$f" -w '%{http_code} %{content_type} %{size_download}' "$url" 2>&1)
   log "$meta  $url -> $f"
 }
+# The chain ends in a self-signed certificate GitHub's runners don't trust. Record the chain the
+# server presents and trust only that (trust on first use) instead of turning verification off.
+echo | openssl s_client -connect flood.larry-cctv.com:443 -servername flood.larry-cctv.com -showcerts 2>/dev/null \
+  | awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' > "$OUT/chain.pem"
+openssl crl2pkcs7 -nocrl -certfile "$OUT/chain.pem" 2>/dev/null | openssl pkcs7 -print_certs -noout 2>/dev/null > "$OUT/chain.txt"
+CURL_CA=(--cacert "$OUT/chain.pem")
 get "$BASE/" "$OUT/files/index.html"
 [ -s "$OUT/files/index.html" ] || { BASE="http://flood.larry-cctv.com"; log "https failed, trying $BASE"; get "$BASE/" "$OUT/files/index.html"; }
 # scripts and stylesheets referenced by the page
