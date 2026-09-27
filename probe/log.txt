@@ -1,0 +1,18 @@
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/ -> probe/files/index.html
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api -> probe/files/guess_api.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api/sensors -> probe/files/guess_api_sensors.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api/stations -> probe/files/guess_api_stations.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api/data -> probe/files/guess_api_data.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/data.json -> probe/files/guess_data_json.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/sensors.json -> probe/files/guess_sensors_json.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api/flood -> probe/files/guess_api_flood.out
+curl: (35) OpenSSL/3.0.13: error:0A000152:SSL routines::unsafe legacy renegotiation disabled
+000  0  https://flood.larry-cctv.com/api/v1/sensors -> probe/files/guess_api_v1_sensors.out
