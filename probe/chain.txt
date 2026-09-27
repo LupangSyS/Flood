@@ -1,0 +1,6 @@
+subject=CN = 182.52.130.47
+issuer=CN = my-palo-ca
+
+subject=CN = my-palo-ca
+issuer=CN = my-palo-ca
+

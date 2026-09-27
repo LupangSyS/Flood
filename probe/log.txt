@@ -1,4 +1,4 @@
-curl: (60) SSL certificate problem: self-signed certificate in certificate chain
+curl: (60) SSL: no alternative certificate subject name matches target host name 'flood.larry-cctv.com'
 More details here: https://curl.se/docs/sslcerts.html
 
 curl failed to verify the legitimacy of the server and therefore could not
@@ -6,7 +6,7 @@ establish a secure connection to it. To learn more about this situation and
 how to fix it, please visit the web page mentioned above.
 000  0  https://flood.larry-cctv.com/ -> probe/files/index.html
 https failed, trying http://flood.larry-cctv.com
-curl: (28) Connection timed out after 30001 milliseconds
+curl: (28) Connection timed out after 30002 milliseconds
 000  0  http://flood.larry-cctv.com/ -> probe/files/index.html
 curl: (28) Connection timed out after 30002 milliseconds
 000  0  http://flood.larry-cctv.com/api -> probe/files/guess_api.out
@@ -20,7 +20,7 @@ curl: (28) Connection timed out after 30002 milliseconds
 000  0  http://flood.larry-cctv.com/data.json -> probe/files/guess_data_json.out
 curl: (28) Connection timed out after 30002 milliseconds
 000  0  http://flood.larry-cctv.com/sensors.json -> probe/files/guess_sensors_json.out
-curl: (28) Connection timed out after 30002 milliseconds
+curl: (28) Connection timed out after 30003 milliseconds
 000  0  http://flood.larry-cctv.com/api/flood -> probe/files/guess_api_flood.out
 curl: (28) Connection timed out after 30002 milliseconds
 000  0  http://flood.larry-cctv.com/api/v1/sensors -> probe/files/guess_api_v1_sensors.out
