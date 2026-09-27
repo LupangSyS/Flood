@@ -115,11 +115,32 @@
       },
       pan(ll) { map.panTo({ lat: ll[0], lng: ll[1] }); },
       onLongPress(cb) {
-        // Google Maps has no long-press event on touch; time a press ourselves.
-        let timer = null;
-        map.addListener('mousedown', e => { timer = setTimeout(() => cb([e.latLng.lat(), e.latLng.lng()]), 600); });
-        ['mouseup', 'dragstart', 'zoom_changed'].forEach(ev => map.addListener(ev, () => clearTimeout(timer)));
-        map.addListener('rightclick', e => cb([e.latLng.lat(), e.latLng.lng()]));
+        // Google Maps has no touch long-press event, so time one from raw touches: exactly one
+        // finger held still for 700 ms. A second finger (pinch), a move (pan) or lifting cancels it.
+        const el = map.getDiv();
+        const ov = new g.OverlayView(); ov.onAdd = ov.draw = ov.onRemove = () => {}; ov.setMap(map);
+        let timer = null, start = null, lastTouch = 0;
+        const cancel = () => { clearTimeout(timer); timer = null; };
+        el.addEventListener('touchstart', e => {
+          lastTouch = Date.now(); cancel();
+          if (e.touches.length !== 1) return;
+          const t = e.touches[0], rect = el.getBoundingClientRect();
+          start = [t.clientX, t.clientY];
+          const px = new g.Point(t.clientX - rect.left, t.clientY - rect.top);
+          timer = setTimeout(() => {
+            timer = null;
+            const proj = ov.getProjection(); if (!proj) return;
+            const ll = proj.fromContainerPixelToLatLng(px);
+            cb([ll.lat(), ll.lng()]);
+          }, 700);
+        }, { passive: true });
+        el.addEventListener('touchmove', e => {
+          const t = e.touches[0];
+          if (e.touches.length !== 1 || !start || Math.hypot(t.clientX - start[0], t.clientY - start[1]) > 10) cancel();
+        }, { passive: true });
+        ['touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, () => { lastTouch = Date.now(); cancel(); }, { passive: true }));
+        // Desktop right-click; ignore the synthetic one some phones fire after a touch.
+        map.addListener('rightclick', e => { if (Date.now() - lastTouch > 1000) cb([e.latLng.lat(), e.latLng.lng()]); });
       },
       onUserDrag(cb) { map.addListener('dragstart', cb); },
     };
@@ -316,7 +337,12 @@
     const setFollow = on => { follow = on; followEl.textContent = 'ตามตำแหน่ง: ' + (on ? 'เปิด' : 'ปิด'); followEl.setAttribute('aria-pressed', on); };
     followEl.addEventListener('click', () => { setFollow(!follow); if (follow && here) map.pan(here); });
     map.onUserDrag(() => { if (follow) setFollow(false); });
-    map.onLongPress(ll => { dest = ll; map.setDest(ll); if (nav) stopNav(map); updateNav(map); });
+    map.onLongPress(ll => {
+      // While navigating the destination stays put; stop navigation first to pick a new one.
+      if (nav) { statusEl.className = 'card'; statusEl.textContent = 'กำลังนำทางอยู่ — กด “หยุดนำทาง” ก่อนเปลี่ยนปลายทาง'; return; }
+      dest = ll; map.setDest(ll); updateNav(map);
+      if (navigator.vibrate) navigator.vibrate(40);
+    });
 
     goEl.addEventListener('click', async () => {
       if (!here) { $('gps').click(); statusEl.textContent = 'รอตำแหน่ง GPS ก่อน แล้วกด “นำทางเลี่ยงน้ำท่วม” อีกครั้ง'; return; }
