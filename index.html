@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>เลี่ยงน้ำท่วม กทม.</title>
+<meta name="description" content="แผนที่ถนนน้ำท่วมกรุงเทพฯ พร้อมแจ้งเตือนตาม GPS">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+<div id="top" class="bar">
+  <div id="status" class="card">แตะ “เริ่ม GPS” เพื่อดูตำแหน่งของคุณ</div>
+</div>
+<div id="bot" class="bar">
+  <button id="gps" type="button">เริ่ม GPS</button>
+  <button id="follow" type="button" class="sec" aria-pressed="true">ตามตำแหน่ง: เปิด</button>
+  <a id="nav" class="btn" href="#" target="_blank" rel="noopener" hidden>นำทางใน Google Maps</a>
+  <details class="card lg" open>
+    <summary id="stamp">กำลังโหลดข้อมูล…</summary>
+    <span><i style="background:var(--R)"></i>&gt;15 ซม.</span>
+    <span><i style="background:var(--r)"></i>10–15 ซม.</span>
+    <span><i style="background:var(--a)"></i>5–10 ซม.</span>
+    <span><i class="dash"></i>รายงานน้ำท่วมขัง</span>
+    <span class="hint">แตะแผนที่ค้างเพื่อตั้งปลายทาง</span>
+  </details>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
