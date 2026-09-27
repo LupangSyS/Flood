@@ -5,6 +5,18 @@ set -u
 BASE="https://flood.larry-cctv.com"
 UA="Mozilla/5.0 (flood-map probe; +https://github.com/LupangSyS/Flood)"
 OUT=probe; rm -rf "$OUT"; mkdir -p "$OUT/files"
+# The site's TLS server needs legacy renegotiation, which OpenSSL 3 refuses by default. Allow only
+# that option for these requests; certificates are still verified.
+export OPENSSL_CONF="$PWD/probe-openssl.cnf"
+cat > "$OPENSSL_CONF" <<'CNF'
+openssl_conf = init
+[init]
+ssl_conf = ssl_sect
+[ssl_sect]
+system_default = sys
+[sys]
+Options = UnsafeLegacyRenegotiation
+CNF
 log() { echo "$*" | tee -a "$OUT/log.txt"; }
 get() { # url -> file; records status, type and size
   local url="$1" f="$2"
@@ -12,6 +24,7 @@ get() { # url -> file; records status, type and size
   log "$meta  $url -> $f"
 }
 get "$BASE/" "$OUT/files/index.html"
+[ -s "$OUT/files/index.html" ] || { BASE="http://flood.larry-cctv.com"; log "https failed, trying $BASE"; get "$BASE/" "$OUT/files/index.html"; }
 # scripts and stylesheets referenced by the page
 grep -oiE '(src|href)="[^"]+\.(js|json)[^"]*"' "$OUT/files/index.html" 2>/dev/null | sed -E 's/^[^"]*"//; s/"$//' | sort -u | head -40 > "$OUT/assets.txt"
 n=0; while read -r a; do n=$((n+1)); case "$a" in http*) u="$a";; /*) u="$BASE$a";; *) u="$BASE/$a";; esac
@@ -26,4 +39,5 @@ for p in /api /api/sensors /api/stations /api/data /data.json /sensors.json /api
   get "$BASE$p" "$OUT/files/guess$(echo "$p" | tr '/.' '__').out"; done
 # drop empty/huge files so the commit stays small
 find "$OUT/files" -type f \( -size 0 -o -size +2M \) -delete
+rm -f "$OPENSSL_CONF"
 exit 0
