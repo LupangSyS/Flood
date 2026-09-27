@@ -119,28 +119,45 @@
         // finger held still for 700 ms. A second finger (pinch), a move (pan) or lifting cancels it.
         const el = map.getDiv();
         const ov = new g.OverlayView(); ov.onAdd = ov.draw = ov.onRemove = () => {}; ov.setMap(map);
-        let timer = null, start = null, lastTouch = 0;
+        // A gesture that ever had two fingers (a pinch) never becomes a long-press, even if the
+        // fingers lift a few milliseconds apart and one is left on the screen.
+        let timer = null, start = null, lastTouch = 0, fingers = 0, multi = false, zoomAtStart = null;
         const cancel = () => { clearTimeout(timer); timer = null; };
+        const opts = { passive: true, capture: true };
         el.addEventListener('touchstart', e => {
           lastTouch = Date.now(); cancel();
-          if (e.touches.length !== 1) return;
+          fingers = e.touches.length;
+          if (fingers > 1) multi = true;
+          if (fingers !== 1 || multi) return;
           const t = e.touches[0], rect = el.getBoundingClientRect();
-          start = [t.clientX, t.clientY];
+          start = [t.clientX, t.clientY]; zoomAtStart = map.getZoom();
           const px = new g.Point(t.clientX - rect.left, t.clientY - rect.top);
           timer = setTimeout(() => {
             timer = null;
+            if (fingers !== 1 || multi || map.getZoom() !== zoomAtStart) return;
             const proj = ov.getProjection(); if (!proj) return;
             const ll = proj.fromContainerPixelToLatLng(px);
             cb([ll.lat(), ll.lng()]);
           }, 700);
-        }, { passive: true });
+        }, opts);
         el.addEventListener('touchmove', e => {
+          lastTouch = Date.now();
+          fingers = e.touches.length; if (fingers > 1) multi = true;
           const t = e.touches[0];
-          if (e.touches.length !== 1 || !start || Math.hypot(t.clientX - start[0], t.clientY - start[1]) > 10) cancel();
-        }, { passive: true });
-        ['touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, () => { lastTouch = Date.now(); cancel(); }, { passive: true }));
-        // Desktop right-click; ignore the synthetic one some phones fire after a touch.
-        map.addListener('rightclick', e => { if (Date.now() - lastTouch > 1000) cb([e.latLng.lat(), e.latLng.lng()]); });
+          if (fingers !== 1 || !start || Math.hypot(t.clientX - start[0], t.clientY - start[1]) > 10) cancel();
+        }, opts);
+        ['touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, e => {
+          lastTouch = Date.now(); cancel();
+          fingers = e.touches.length;
+          if (fingers === 0) multi = false; // gesture over
+        }, opts));
+        map.addListener('zoom_changed', cancel);
+        // Desktop right-click only: on phones Chrome turns a held touch into a right-click too, so
+        // ignore it whenever a finger is down or was lifted in the last 1.5 s.
+        map.addListener('rightclick', e => {
+          if (fingers > 0 || Date.now() - lastTouch < 1500) return;
+          cb([e.latLng.lat(), e.latLng.lng()]);
+        });
       },
       onUserDrag(cb) { map.addListener('dragstart', cb); },
     };
