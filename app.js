@@ -2,7 +2,8 @@
 // Flood-avoidance map: draws data/flood.geojson on Google Maps (when a key is set in config.js)
 // or on Leaflet + OpenStreetMap, follows the viewer's GPS and warns near flooded roads.
 (function () {
-  const CFG = Object.assign({ GOOGLE_MAPS_API_KEY: '', WARN_METERS: 300, REFRESH_MINUTES: 5 }, window.FLOOD_CONFIG);
+  const CFG = Object.assign({ GOOGLE_MAPS_API_KEY: '', WARN_METERS: 300, REFRESH_MINUTES: 5, STALE_MINUTES: 45, POINT_RADIUS_M: 150,
+    DATA_URL: 'data/flood.geojson', FALLBACK_URL: 'data/flood.geojson' }, window.FLOOD_CONFIG);
   const COLOR = { R: '#7a0010', r: '#e0201b', a: '#f29100', H: '#6a1b9a', M: '#8e44ad', L: '#b88ad1' };
   const LEVEL_TEXT = { R: 'น้ำท่วมสูง >15 ซม.', r: 'น้ำท่วม 10–15 ซม.', a: 'น้ำท่วม 5–10 ซม.',
     H: 'รายงาน: น้ำท่วมสูง', M: 'รายงาน: ปานกลาง', L: 'รายงาน: เล็กน้อย' };
@@ -20,10 +21,13 @@
   const stripHtml = h => new DOMParser().parseFromString(h || '', 'text/html').body.textContent.trim();
 
   function popupHtml(p) {
-    if (p.src !== 'sensor') return `<div class="pop"><b>${esc(p.name)}</b>${esc(LEVEL_TEXT[p.level] || '')}</div>`;
-    const sensors = (p.sensors || []).map(s => `${esc(s.id)} ${esc(s.at)} · ${esc(s.depth_cm)} ซม.`).join('<br>');
-    return `<div class="pop"><b>${esc(p.name)}</b>${esc(LEVEL_TEXT[p.level] || '')} · สูงสุด ${esc(p.depth_cm)} ซม.<br>` +
-      `เขต${esc(p.district)} · ${esc(p.span)}${sensors ? '<br><small>' + sensors + '</small>' : ''}</div>`;
+    if (p.src === 'report') {
+      return `<div class="pop"><b>${esc(p.name)}</b>${esc(LEVEL_TEXT[p.level] || '')} · ${esc(p.n)} รายงาน` +
+        `${p.last ? '<br><small>ล่าสุด ' + esc(p.last) + '</small>' : ''}<br><small>เป็นคำบอกเล่าของผู้ใช้ ไม่ใช่ค่าจากเครื่องวัด</small></div>`;
+    }
+    const where = p.geom === 'point' ? 'ตำแหน่งจุดวัด (ไม่พบเส้นถนน)' : 'ช่วงถนนโดยประมาณ ±200 ม. จากจุดวัด';
+    return `<div class="pop"><b>${esc(p.name)}</b>${esc(LEVEL_TEXT[p.level] || '')} · ${p.at_least ? 'อย่างน้อย ' : ''}${esc(p.depth_cm)} ซม.<br>` +
+      `เขต${esc(p.district)}<br><small>วัดเมื่อ ${esc(p.measured_at)}${p.since ? ' · ท่วมตั้งแต่ ' + esc(p.since) : ''}</small><br><small>${where}</small></div>`;
   }
 
   // Distance in metres from point a=[lat,lng] to a polyline of [lat,lng] (flat-earth, fine at city scale).
@@ -93,6 +97,13 @@
         lines.forEach(l => l.setMap(null));
         lines = features.map(f => {
           const p = f.properties, report = p.src === 'report';
+          if (f.geometry.type === 'Point') {
+            const [lng, lat] = f.geometry.coordinates;
+            const dot = new g.Circle({ map, center: { lat, lng }, radius: CFG.POINT_RADIUS_M, strokeColor: COLOR[p.level] || '#555',
+              strokeWeight: report ? 2 : 3, strokeOpacity: 0.9, fillColor: COLOR[p.level] || '#555', fillOpacity: report ? 0.15 : 0.45 });
+            dot.addListener('click', e => { info.setContent(popupHtml(p)); info.setPosition(e.latLng); info.open(map); });
+            return dot;
+          }
           const line = new g.Polyline({ map, path: f.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] })),
             strokeColor: COLOR[p.level] || '#555', strokeWeight: report ? 0 : 8, strokeOpacity: 0.85,
             icons: report ? [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeWeight: 6, scale: 3 }, offset: '0', repeat: '14px' }] : null });
@@ -173,6 +184,12 @@
         layer.clearLayers();
         for (const f of features) {
           const p = f.properties, report = p.src === 'report';
+          if (f.geometry.type === 'Point') {
+            const [lng, lat] = f.geometry.coordinates;
+            L.circle([lat, lng], { radius: CFG.POINT_RADIUS_M, color: COLOR[p.level] || '#555', weight: report ? 2 : 3,
+              fillOpacity: report ? 0.15 : 0.45, dashArray: report ? '6 5' : null }).bindPopup(popupHtml(p)).addTo(layer);
+            continue;
+          }
           L.polyline(f.geometry.coordinates.map(c => [c[1], c[0]]), { color: COLOR[p.level] || '#555',
             weight: report ? 6 : 8, opacity: 0.85, dashArray: report ? '8 6' : null }).bindPopup(popupHtml(p)).addTo(layer);
         }
@@ -214,29 +231,60 @@
   }
 
   // ---- data ----
-  async function loadData(map) {
-    try {
-      const res = await fetch('data/flood.geojson?t=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const fc = await res.json();
-      const stamp = fc.meta && fc.meta.updated_at;
-      if (stamp && stamp === dataStamp) return;
-      dataStamp = stamp;
-      segs = fc.features.map(f => ({ p: f.properties, ll: f.geometry.coordinates.map(c => [c[1], c[0]]) }));
-      map.draw(fc.features);
-      const m = fc.meta || {};
-      const upd = stamp ? new Date(stamp).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-      $('stamp').textContent = `เซ็นเซอร์ ${m.sensor_time || '–'} น. · รายงาน ${m.report_time || '–'} น.` + (upd ? ` · อัปเดต ${upd}` : '');
-      if (here) checkNearby();
-    } catch (e) {
-      $('stamp').textContent = 'โหลดข้อมูลน้ำท่วมไม่ได้ จะลองใหม่อัตโนมัติ';
+  // Read one data file; the main one is built every 10 minutes by a GitHub Action, the fallback ships with the site.
+  async function fetchData(url) {
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const fc = await res.json();
+    if (!fc || !Array.isArray(fc.features)) throw new Error('bad data');
+    return fc;
+  }
+
+  // "2026-10-06 14:25:00" is Bangkok time (UTC+7).
+  const thaiTime = s => (s ? new Date(String(s).replace(' ', 'T') + '+07:00') : null);
+  const fmtTime = d => d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  let meta = {};
+  function renderStamp() {
+    const latest = thaiTime(meta.latest);
+    const ageMin = latest ? (Date.now() - latest.getTime()) / 60000 : Infinity;
+    const old = !latest || ageMin > CFG.STALE_MINUTES || meta.stale || meta.scrape_failing;
+    $('stamp').textContent = latest
+      ? `ข้อมูลวัดล่าสุด ${fmtTime(latest)} น. · ถนนมีน้ำ ${(meta.drawn_flood || 0) + (meta.drawn_slight || 0)} จุด`
+      : 'ข้อมูลน้ำท่วมจากไฟล์สำรอง';
+    const banner = $('stale');
+    banner.hidden = !old;
+    if (old) {
+      banner.textContent = latest
+        ? `⚠ ข้อมูลอาจเก่า: วัดล่าสุด ${fmtTime(latest)} น. ถนนที่ไม่แสดงสีไม่ได้แปลว่าปลอดภัย`
+        : '⚠ โหลดข้อมูลล่าสุดไม่ได้ กำลังแสดงข้อมูลสำรองที่อาจเก่า ถนนที่ไม่แสดงสีไม่ได้แปลว่าปลอดภัย';
     }
+  }
+
+  async function loadData(map) {
+    let fc;
+    try { fc = await fetchData(CFG.DATA_URL); }
+    catch (e) {
+      console.warn('live data failed, using fallback', e);
+      try { fc = await fetchData(CFG.FALLBACK_URL); fc.meta = Object.assign({}, fc.meta, { latest: null }); }
+      catch (e2) { $('stamp').textContent = 'โหลดข้อมูลน้ำท่วมไม่ได้ จะลองใหม่อัตโนมัติ'; return; }
+    }
+    meta = fc.meta || {};
+    renderStamp();
+    const stamp = (meta.generated || '') + '|' + (meta.latest || 'fallback');
+    if (stamp === dataStamp) return;
+    dataStamp = stamp;
+    segs = fc.features.map(f => f.geometry.type === 'Point'
+      ? { p: f.properties, ll: [[f.geometry.coordinates[1], f.geometry.coordinates[0]]], r: CFG.POINT_RADIUS_M }
+      : { p: f.properties, ll: f.geometry.coordinates.map(c => [c[1], c[0]]), r: 0 });
+    map.draw(fc.features);
+    if (here) checkNearby();
   }
 
   // ---- GPS ----
   function checkNearby() {
     let near = null, nd = Infinity;
-    for (const s of segs) { const d = distance(here, s.ll); if (d < nd) { nd = d; near = s; } }
+    for (const s of segs) { const d = Math.max(0, distance(here, s.ll) - s.r); if (d < nd) { nd = d; near = s; } }
     if (!near) return;
     if (nd < CFG.WARN_METERS) {
       statusEl.className = 'card warn';
@@ -262,7 +310,7 @@
     let total = 0;
     for (let i = 0; i < path.length - 1; i++) {
       const mid = [(path[i][0] + path[i + 1][0]) / 2, (path[i][1] + path[i + 1][1]) / 2];
-      if (segs.some(s => distance(mid, s.ll) < FLOOD_BUFFER_M)) total += distance(path[i], [path[i + 1]]);
+      if (segs.some(s => distance(mid, s.ll) < FLOOD_BUFFER_M + s.r)) total += distance(path[i], [path[i + 1]]);
     }
     return total;
   }
@@ -337,6 +385,7 @@
   createMap().then(map => {
     loadData(map);
     setInterval(() => loadData(map), CFG.REFRESH_MINUTES * 60 * 1000);
+    setInterval(renderStamp, 60 * 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(map); });
 
     $('gps').addEventListener('click', () => {

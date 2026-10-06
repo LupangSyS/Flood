@@ -8,23 +8,24 @@ or, when no API key is set, over OpenStreetMap.
 
 ## Data
 
-`data/flood.geojson` is extracted from a public Claude artifact that publishes Bangkok road-flood sensor
-readings: https://claude.ai/artifact/N6umcENfSgoY6GMkhVKwZs
+Live road-flood readings come from the Bangkok Drainage and Sewerage Department's road sensors, through the
+open API of [POPNIX Flood](https://flood.pop.in.th/api/) (free, no key; see its terms of use). They are not an
+official warning.
 
-- Solid lines: roads where water-level sensors read flooding, colored by depth
-  (dark red >15 cm, red 10–15 cm, orange 5–10 cm).
-- Dashed purple lines: the list of roads reported as still flooded.
+- `.github/workflows/update-flood.yml` runs every 10 minutes: `scripts/build-flood.js` reads `api_roads.php`
+  and `api_reports.php`, joins the depths onto `data/sensor-geometry.json`, and force-pushes the result as the
+  single commit of the `data` branch. The site reads `flood.geojson` from there (`DATA_URL` in `config.js`).
+  Visitors' phones do not call POPNIX; only this job does, as its terms ask.
+- `.github/workflows/snap-geometry.yml` (run once, and when sensors are added) uses `scripts/snap-geometry.js` to
+  find the OpenStreetMap road each sensor sits on and keep about 200 m either side of it. The coloured stretch is
+  therefore an approximation. A sensor with no matching road is drawn as a 150 m circle.
+- `data/flood.geojson` is an old copy kept as a fallback. The page warns when the newest reading is older than
+  45 minutes (`STALE_MINUTES`).
 
-A scheduled Claude routine re-reads that artifact, runs the extractor, and commits `data/flood.geojson`
-only when the data changed. Open pages re-check the file every 5 minutes.
+Credit shown on the page: Drainage and Sewerage Department, BMA, via POPNIX Flood; road lines (c) OpenStreetMap
+contributors (ODbL).
 
-To update by hand, save the artifact's HTML and run:
-
-```bash
-node scripts/extract.js artifact.html   # writes data/flood.geojson, prints "unchanged" if nothing changed
-```
-
-The extractor parses the artifact's `ROADS`, `GEO` and `REPORTS` blocks as JSON; it never executes the artifact's code.
+Tests: `node test/geo.test.js`.
 
 ## Google Maps key
 

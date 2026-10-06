@@ -21,3 +21,7 @@ button:focus-visible,a.btn:focus-visible,summary:focus-visible{outline:3px solid
 .lg i.dash{background:repeating-linear-gradient(90deg,var(--rep) 0 5px,transparent 5px 8px)}
 .lg .hint{color:#5a6b76}
 .pop b{display:block;margin-bottom:2px}
+
+#stale{flex-basis:100%;font-weight:600;font-size:13px}
+.lg .attr{font-size:11px;line-height:1.35;color:#5a6b76;max-width:46ch}
+.lg .attr a{color:var(--pri)}

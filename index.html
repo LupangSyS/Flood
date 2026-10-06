@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>เลี่ยงน้ำท่วม กทม.</title>
 <meta name="description" content="แผนที่ถนนน้ำท่วมกรุงเทพฯ พร้อมแจ้งเตือนตาม GPS">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="map"></div>
 <div id="top" class="bar">
+  <div id="stale" class="card warn" hidden></div>
   <div id="status" class="card">แตะ “เริ่ม GPS” เพื่อดูตำแหน่งของคุณ</div>
   <div id="route" class="card" hidden>
     <div id="step" class="step"></div>
@@ -27,11 +28,14 @@
     <span><i style="background:var(--R)"></i>&gt;15 ซม.</span>
     <span><i style="background:var(--r)"></i>10–15 ซม.</span>
     <span><i style="background:var(--a)"></i>5–10 ซม.</span>
-    <span><i class="dash"></i>รายงานน้ำท่วมขัง</span>
-    <span class="hint">ใช้นิ้วเดียวแตะแผนที่ค้างเพื่อตั้งปลายทาง · v4</span>
+    <span><i class="dash"></i>รายงานผู้ใช้ (ยังไม่ยืนยัน)</span>
+    <span class="hint">ใช้นิ้วเดียวแตะแผนที่ค้างเพื่อตั้งปลายทาง · v5</span>
+    <span class="attr">ข้อมูล: สำนักการระบายน้ำ กรุงเทพมหานคร ผ่าน <a href="https://flood.pop.in.th" target="_blank" rel="noopener">POPNIX Flood (flood.pop.in.th)</a>
+      · ไม่ใช่ประกาศทางการ ติดตามประกาศจาก กทม. และกรมอุตุนิยมวิทยา · ค่าที่วัดเป็นของจุดติดตั้งเท่านั้น ถนนที่ไม่มีจุดวัดไม่ได้แปลว่าไม่มีน้ำ
+      · เส้นถนน © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ช่วงโดยประมาณ)</span>
   </details>
 </div>
-<script src="config.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
