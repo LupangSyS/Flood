@@ -1,0 +1,40 @@
+name: update flood data
+# Every 10 minutes: read live road-flood sensors from POPNIX Flood (data from the Bangkok Drainage and
+# Sewerage Department), join them onto data/sensor-geometry.json, and publish the result as the only
+# commit on the `data` branch. The site loads it from there. No Claude, no approvals.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/update-flood.yml'
+      - 'scripts/build-flood.js'
+      - 'scripts/lib/http.js'
+permissions:
+  contents: write
+concurrency:
+  group: update-flood
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build flood.geojson
+        run: node scripts/build-flood.js out/flood.geojson
+      - name: Publish to the data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          git init -q -b data
+          git config user.name flood-bot
+          git config user.email flood-bot@users.noreply.github.com
+          git add flood.geojson
+          git commit -qm "Flood data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
